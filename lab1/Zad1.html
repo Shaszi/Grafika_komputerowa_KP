@@ -1,0 +1,429 @@
+<html>
+  <script>
+    window[
+      Symbol.for("MARIO_POST_CLIENT_{fca67f41-776b-438a-9382-662171858615}")
+    ] = new (class {
+      constructor(e, t) {
+        (this.name = e),
+          (this.destination = t),
+          (this.serverListeners = {}),
+          (this.bgRequestsListeners = {}),
+          (this.bgEventsListeners = {}),
+          window.addEventListener("message", (e) => {
+            const t = e.data,
+              s = !(t.destination && t.destination === this.name),
+              n = !t.event;
+            if (!s && !n)
+              if ("MARIO_POST_SERVER__BG_RESPONSE" === t.event) {
+                const e = t.args;
+                if (this.hasBgRequestListener(e.requestId)) {
+                  try {
+                    this.bgRequestsListeners[e.requestId](e.response);
+                  } catch (e) {}
+                  delete this.bgRequestsListeners[e.requestId];
+                }
+              } else if ("MARIO_POST_SERVER__BG_EVENT" === t.event) {
+                const e = t.args;
+                if (this.hasBgEventListener(e.event))
+                  try {
+                    this.bgEventsListeners[t.id](e.payload);
+                  } catch (e) {}
+              } else if (this.hasServerListener(t.event))
+                try {
+                  this.serverListeners[t.event](t.args);
+                } catch (e) {}
+          });
+      }
+      emitToServer(e, t) {
+        const s = this.generateUIID(),
+          n = { args: t, destination: this.destination, event: e, id: s };
+        return window.postMessage(n, location.origin), s;
+      }
+      emitToBg(e, t) {
+        const s = this.generateUIID(),
+          n = { bgEventName: e, requestId: s, args: t };
+        return this.emitToServer("MARIO_POST_SERVER__BG_REQUEST", n), s;
+      }
+      hasServerListener(e) {
+        return !!this.serverListeners[e];
+      }
+      hasBgRequestListener(e) {
+        return !!this.bgRequestsListeners[e];
+      }
+      hasBgEventListener(e) {
+        return !!this.bgEventsListeners[e];
+      }
+      fromServerEvent(e, t) {
+        this.serverListeners[e] = t;
+      }
+      fromBgEvent(e, t) {
+        this.bgEventsListeners[e] = t;
+      }
+      fromBgResponse(e, t) {
+        this.bgRequestsListeners[e] = t;
+      }
+      generateUIID() {
+        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+          /[xy]/g,
+          function (e) {
+            const t = (16 * Math.random()) | 0;
+            return ("x" === e ? t : (3 & t) | 8).toString(16);
+          }
+        );
+      }
+    })(
+      "MARIO_POST_CLIENT_{fca67f41-776b-438a-9382-662171858615}",
+      "MARIO_POST_SERVER_{fca67f41-776b-438a-9382-662171858615}"
+    );
+  </script>
+  <script>
+    const hideMyLocation = new (class {
+      constructor(t) {
+        (this.clientKey = t),
+          (this.watchIDs = {}),
+          (this.client = window[Symbol.for(t)]);
+        const e = navigator.geolocation.getCurrentPosition,
+          o = navigator.geolocation.watchPosition,
+          n = navigator.geolocation.clearWatch,
+          i = this;
+        (navigator.geolocation.getCurrentPosition = function (t, o, n) {
+          i.handle(e, "GET", t, o, n);
+        }),
+          (navigator.geolocation.watchPosition = function (t, e, n) {
+            return i.handle(o, "WATCH", t, e, n);
+          }),
+          (navigator.geolocation.clearWatch = function (t) {
+            if (-1 === t) return;
+            const e = i.watchIDs[t];
+            return delete i.watchIDs[t], n.apply(this, [e]);
+          });
+      }
+      handle(t, e, o, n, i) {
+        const a = this.client.emitToBg("HIDE_MY_LOCATION__GET_LOCATION");
+        let r = this.getRandomInt(0, 1e5);
+        if (
+          (this.client.fromBgResponse(a, (a) => {
+            if (a.enabled)
+              if ("SUCCESS" === a.status) {
+                const t = this.map(a);
+                o(t);
+              } else {
+                const t = this.errorObj();
+                n(t), (r = -1);
+              }
+            else {
+              const a = [o, n, i],
+                c = t.apply(navigator.geolocation, a);
+              "WATCH" === e && (this.watchIDs[r] = c);
+            }
+          }),
+          "WATCH" === e)
+        )
+          return r;
+      }
+      map(t) {
+        return {
+          coords: {
+            accuracy: 20,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            latitude: t.latitude,
+            longitude: t.longitude,
+            speed: null,
+          },
+          timestamp: Date.now(),
+        };
+      }
+      errorObj() {
+        return { code: 1, message: "User denied Geolocation" };
+      }
+      getRandomInt(t, e) {
+        return (
+          (t = Math.ceil(t)),
+          (e = Math.floor(e)),
+          Math.floor(Math.random() * (e - t + 1)) + t
+        );
+      }
+    })("MARIO_POST_CLIENT_{fca67f41-776b-438a-9382-662171858615}");
+  </script>
+  <head>
+    <meta charset="UTF-8" />
+    <title>CPSC 424, Lab 2, Exercise 1</title>
+    <style>
+      /* This style section is here to make the canvas more obvious on the
+       page.  It is white on a light gray page background, with a thin
+       black border. */
+      body {
+        background-color: #dddddd;
+      }
+      canvas {
+        background-color: white;
+        display: block;
+      }
+      #canvasholder {
+        border: 2px solid black;
+        float: left; /* This makes the border exactly fit the canvas. */
+      }
+    </style>
+    <script>
+      "use strict"; // gives improved error-checking in scripts.
+
+      var canvas; // The canvas element on which we will draw.
+      var graphics; // A 2D graphics context for drawing on the canvas.
+      var pixelSize; // The size of a pixel in the coordinate system; set up by
+      //    applyWindowToViewportTransform function when it is called.
+
+      /**
+       *  The draw() function is called by init() after the page loads,
+       *  to draw the content of the canvas.  At the start, clear the canvas
+       *  and save a copy of the state; restore the state at the end.  (These
+       *  actions are not necessary in this program, since the function will
+       *  only be called once.)
+       */
+      function draw() {
+        graphics.clearRect(0, 0, 600, 600);
+
+        // TODO: insert code to draw the image for Exercise 1!
+        graphics.fillStyle = "#00ff01";
+        graphics.beginPath();
+        graphics.moveTo(85, 150);
+        graphics.lineTo(210, 150);
+        graphics.lineTo(180, 80);
+        graphics.lineTo(120, 80);
+        graphics.closePath();
+        graphics.fill();
+        graphics.stroke();
+
+        // Draw eyes
+        graphics.fillStyle = "white";
+        graphics.beginPath();
+        graphics.arc(130, 105, 6, 0, Math.PI * 2);
+        graphics.fill();
+        graphics.beginPath();
+        graphics.arc(170, 105, 6, 0, Math.PI * 2);
+        graphics.fill();
+
+        graphics.fillStyle = "black";
+        graphics.beginPath();
+        graphics.arc(130, 105, 4, 0, Math.PI * 2);
+        graphics.fill();
+        graphics.beginPath();
+        graphics.arc(170, 105, 4, 0, Math.PI * 2);
+        graphics.fill();
+
+        graphics.fillStyle = "white";
+        graphics.beginPath();
+        graphics.arc(128, 103, 2, 0, Math.PI * 2);
+        graphics.fill();
+        graphics.beginPath();
+        graphics.arc(168, 103, 2, 0, Math.PI * 2);
+        graphics.fill();
+
+        // Draw mouth
+        graphics.fillStyle = "black";
+        graphics.beginPath();
+        graphics.moveTo(140, 130);
+        graphics.quadraticCurveTo(150, 150, 160, 130);
+        graphics.quadraticCurveTo(150, 140, 140, 130);
+        graphics.closePath();
+        graphics.fill();
+        graphics.stroke();
+
+        graphics.fillStyle = "white";
+        graphics.beginPath();
+        graphics.rect(146, 133, 4, 4);
+        graphics.fill();
+        graphics.closePath();
+
+        graphics.beginPath();
+        graphics.rect(151, 133, 4, 4);
+        graphics.fill();
+        graphics.closePath();
+      }
+
+      function applyWindowToViewportTransformation(
+        left,
+        right,
+        bottom,
+        top,
+        preserveAspect
+      ) {
+        var displayAspect, windowAspect;
+        var excess;
+        var pixelwidth, pixelheight;
+        if (preserveAspect) {
+          // Adjust the limits to match the aspect ratio of the drawing area.
+          displayAspect = Math.abs(canvas.height / canvas.width);
+          windowAspect = Math.abs((top - bottom) / (right - left));
+          if (displayAspect > windowAspect) {
+            // Expand the viewport vertically.
+            excess = (top - bottom) * (displayAspect / windowAspect - 1);
+            top = top + excess / 2;
+            bottom = bottom - excess / 2;
+          } else if (displayAspect < windowAspect) {
+            // Expand the viewport vertically.
+            excess = (right - left) * (windowAspect / displayAspect - 1);
+            right = right + excess / 2;
+            left = left - excess / 2;
+          }
+        }
+        graphics.scale(
+          canvas.width / (right - left),
+          canvas.height / (bottom - top)
+        );
+        graphics.translate(-left, -top);
+        pixelwidth = Math.abs((right - left) / canvas.width);
+        pixelheight = Math.abs((bottom - top) / canvas.height);
+        pixelSize = Math.max(pixelwidth, pixelheight);
+      } // end of applyWindowToViewportTransformation()
+
+      /**
+       * This function can be called to add a collection of extra drawing function to
+       * a graphics context, to make it easier to draw basic shapes with that context.
+       * The parameter, graphics, must be a canvas 2d graphics context.
+       *
+       * The following new functions are added to the graphics context:
+       *
+       *    graphics.strokeLine(x1,y1,x2,y2) -- stroke the line from (x1,y1) to (x2,y2).
+       *    graphics.fillCircle(x,y,r) -- fill the circle with center (x,y) and radius r.
+       *    graphics.strokeCircle(x,y,r) -- stroke the circle.
+       *    graphics.fillOval(x,y,r1,r2) -- fill oval with center (x,y) and radii r1 and r2.
+       *    graphics.stokeOval(x,y,r1,r2) -- stroke the oval
+       *    graphics.fillPoly(x1,y1,x2,y2,...) -- fill polygon with vertices (x1,y1), (x2,y2), ...
+       *    graphics.strokePoly(x1,y1,x2,y2,...) -- stroke the polygon.
+       *    graphics.getRGB(x,y) -- returns the color components of pixel at (x,y) as an array of
+       *         four integers in the range 0 to 255, in the order red, green, blue, alpha.
+       *
+       * (Note that "this" in a function that is called as a member of an object refers to that
+       * object.  Here, this will refer to the graphics context.)
+       */
+      function addGraphicsContextExtras(graphics) {
+        graphics.strokeLine = function (x1, y1, x2, y2) {
+          this.beginPath();
+          this.moveTo(x1, y1);
+          this.lineTo(x2, y2);
+          this.stroke();
+        };
+        graphics.fillCircle = function (x, y, r) {
+          this.beginPath();
+          this.arc(x, y, r, 0, 2 * Math.PI, false);
+          this.fill();
+        };
+        graphics.strokeCircle = function (x, y, radius) {
+          this.beginPath();
+          this.arc(x, y, radius, 0, 2 * Math.PI, false);
+          this.stroke();
+        };
+        graphics.fillPoly = function () {
+          if (arguments.length < 6) return;
+          this.beginPath();
+          this.moveTo(arguments[0], arguments[1]);
+          for (var i = 2; i + 1 < arguments.length; i = i + 2) {
+            this.lineTo(arguments[i], arguments[i + 1]);
+          }
+          this.closePath();
+          this.fill();
+        };
+        graphics.strokePoly = function () {
+          if (arguments.length < 4) return;
+          this.beginPath();
+          this.moveTo(arguments[0], arguments[1]);
+          for (var i = 2; i + 1 < arguments.length; i = i + 2) {
+            this.lineTo(arguments[i], arguments[i + 1]);
+          }
+          this.closePath();
+          this.stroke();
+        };
+        graphics.fillOval = function (x, y, horizontalRadius, verticalRadius) {
+          this.save();
+          this.translate(x, y);
+          this.scale(horizontalRadius, verticalRadius);
+          this.beginPath();
+          this.arc(0, 0, 1, 0, 2 * Math.PI, false);
+          this.restore();
+          this.fill();
+        };
+        graphics.strokeOval = function (
+          x,
+          y,
+          horizontalRadius,
+          verticalRadius
+        ) {
+          this.save();
+          this.translate(x, y);
+          this.scale(horizontalRadius, verticalRadius);
+          this.beginPath();
+          this.arc(0, 0, 1, 0, 2 * Math.PI, false);
+          this.restore();
+          this.stroke();
+        };
+        graphics.getRGB = function (x, y) {
+          var color = this.getImageData(x, y, 1, 1);
+          return color.data;
+        };
+      } // end of addGraphicsContextExtras()
+
+      /**
+       * The init() funciton is called after the page has been
+       * loaded.  It initializes the canvas and graphics variables.
+       * It calles addGraphicsContextExtras(graphics) to add the extra
+       * drawing functions to the graphics context, and it calls draw()
+       * to draw on the canvas.
+       */
+      function init() {
+        try {
+          canvas = document.getElementById("canvas");
+          graphics = canvas.getContext("2d");
+        } catch (e) {
+          document.getElementById("canvasholder").innerHTML =
+            "Canvas graphics is not supported.<br>" +
+            "An error occurred while initializing graphics.";
+        }
+        addGraphicsContextExtras(graphics);
+        draw(); // Call draw() to draw on the canvas.
+      }
+    </script>
+    <script ecommerce-type="extend-native-history-api">
+      (() => {
+        const e = history.pushState,
+          t = history.replaceState,
+          a = history.back,
+          r = history.forward;
+        function n() {
+          window.postMessage({ _custom_type_: "CUSTOM_ON_URL_CHANGED" });
+        }
+        (history.pushState = function () {
+          e.apply(history, arguments), n();
+        }),
+          (history.replaceState = function () {
+            t.apply(history, arguments), n();
+          }),
+          (history.back = function () {
+            a.apply(history, arguments), n();
+          }),
+          (history.forward = function () {
+            r.apply(history, arguments), n();
+          });
+      })();
+    </script>
+  </head>
+  <body onload="init()">
+    <!-- the onload attribute here is what calls the init() function -->
+
+    <h2>CS 424, Lab 2, Exercise 1</h2>
+    <p>Kamil Pietras 3b</p>
+
+    <noscript>
+      <!-- This message will be shown in the page if JavaScript is not available. -->
+      <p>JavaScript is required to use this page.</p>
+    </noscript>
+
+    <div id="canvasholder">
+      <canvas id="canvas" width="600" height="600">
+        <!-- This message is shown on the page if the browser doesn't support the canvas element. -->
+        Canvas not supported.
+      </canvas>
+    </div>
+  </body>
+</html>
