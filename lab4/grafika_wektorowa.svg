@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="4in" height="4in" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid">
+<defs>
+<g id="dekagon" fill="purple">
+	<polygon points="100,0 80,59 31,95 -31,95 -80,59 -100,0 -80,-59 -31,-95 31,-95 80,-59" fill="purple"/>
+    <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="4s" repeatCount="indefinite"/>
+</g>
+<g id="cos">
+	<use xlink:href="#dekagon" transform="translate(140,180) scale(0.3)" />
+    <use xlink:href="#dekagon" transform="translate(260,220) scale(0.3)" />
+    <line x1="140" y1="180" x2="260" y2="220" stroke-width="2" stroke="brown" />
+    
+</g>
+</defs>
+	<g>
+        //<use xlink:href="#cos" transform="translate(10,10) scale(0.9)" />
+        <polygon points="200,200 180,335 220,335" transform="translate(10,10) scale(0.9)" fill="green"/>
+    </g>
+
+    <g>
+        <use xlink:href="#cos" transform="translate(-50,0) scale(0.6)" />
+        <polygon points="200,200 180,335 220,335" transform="translate(-50,0) scale(0.6)" fill="red"/>
+    </g>
+
+    <g>
+        <use xlink:href="#cos" transform="translate(120,0) scale(0.4)" />
+        <polygon points="200,200 180,335 220,335" transform="translate(120,0) scale(0.4)" fill="blue"/>
+    </g>
+
+</svg>
